@@ -1,86 +1,103 @@
-body {
-    font-family: Arial, sans-serif;
-    background-color: #282828;
-    color: white;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
+const audio = document.getElementById('audio');
+const playBtn = document.getElementById('play');
+const prevBtn = document.getElementById('prev');
+const nextBtn = document.getElementById('next');
+const progressBar = document.getElementById('progress-bar');
+const volumeBar = document.getElementById('volume-bar');
+const trackTitle = document.querySelector('.track-title');
+const trackArtist = document.querySelector('.track-artist');
+const trackCover = document.querySelector('.cover');
+const trackItems = document.querySelectorAll('.track-item');
+
+let currentTrackIndex = 0;
+let isPlaying = false;
+
+const tracks = Array.from(trackItems).map(item => ({
+    src: item.dataset.track,
+    title: item.dataset.title,
+    artist: item.dataset.artist,
+    cover: item.dataset.cover
+}));
+
+function loadTrack(index) {
+    if (index < 0 || index >= tracks.length) {
+        console.error('Invalid track index');
+        return;
+    }
+
+    audio.src = tracks[index].src;
+    trackTitle.textContent = tracks[index].title;
+    trackArtist.textContent = tracks[index].artist;
+    trackCover.src = tracks[index].cover;
+    highlightActiveTrack(index);
+
+    // Ждем, пока трек полностью загрузится
+    audio.addEventListener('loadeddata', () => {
+        if (isPlaying) playTrack();
+    }, { once: true });
 }
 
-.music-player {
-    width: 300px;
-    background-color: #121212;
-    border-radius: 10px;
-    padding: 20px;
-    text-align: center;
+function highlightActiveTrack(index) {
+    trackItems.forEach((item, i) => {
+        item.classList.toggle('active', i === index);
+    });
 }
 
-.track-info {
-    margin-bottom: 20px;
+function playTrack() {
+    audio.play().then(() => {
+        playBtn.textContent = '⏸️';
+        isPlaying = true;
+    }).catch(error => {
+        console.error('Error playing track:', error);
+    });
 }
 
-.cover {
-    width: 100%;
-    border-radius: 10px;
+function pauseTrack() {
+    audio.pause();
+    playBtn.textContent = '▶️';
+    isPlaying = false;
 }
 
-.track-title {
-    font-size: 18px;
-    margin: 10px 0 5px;
-}
+playBtn.addEventListener('click', () => {
+    if (isPlaying) {
+        pauseTrack();
+    } else {
+        playTrack();
+    }
+});
 
-.track-artist {
-    font-size: 14px;
-    color: #b3b3b3;
-}
+audio.addEventListener('timeupdate', () => {
+    if (audio.duration) {
+        progressBar.value = (audio.currentTime / audio.duration) * 100;
+    }
+});
 
-.controls {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+progressBar.addEventListener('input', () => {
+    if (audio.duration) {
+        audio.currentTime = (progressBar.value / 100) * audio.duration;
+    }
+});
 
-.control-btn {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 20px;
-    cursor: pointer;
-}
+volumeBar.addEventListener('input', () => {
+    audio.volume = volumeBar.value;
+});
 
-.progress-bar, .volume-bar {
-    width: 100%;
-    margin-top: 10px;
-}
+prevBtn.addEventListener('click', () => {
+    currentTrackIndex = (currentTrackIndex - 1 + tracks.length) % tracks.length;
+    loadTrack(currentTrackIndex);
+});
 
-.progress-bar {
-    background-color: #1db954;
-}
+nextBtn.addEventListener('click', () => {
+    currentTrackIndex = (currentTrackIndex + 1) % tracks.length;
+    loadTrack(currentTrackIndex);
+});
 
-.volume-bar {
-    background-color: #535353;
-}
-.track-list {
-    list-style-type: none;
-    padding: 0;
-    margin-top: 20px;
-}
+trackItems.forEach((item, index) => {
+    item.addEventListener('click', () => {
+        currentTrackIndex = index;
+        loadTrack(currentTrackIndex);
+    });
+});
 
-.track-item {
-    padding: 10px;
-    background-color: #1e1e1e;
-    margin-bottom: 5px;
-    cursor: pointer;
-    border-radius: 5px;
-    transition: background-color 0.3s;
-}
-
-.track-item:hover {
-    background-color: #333;
-}
-
-.track-item.active {
-    background-color: #1db954;
-}
+// Инициализируем первый трек
+loadTrack(currentTrackIndex);
